@@ -90,9 +90,19 @@ def health():
     else:
         dsn = {"set": False}
 
+    # Whether the pieces uploads and AI depend on are actually configured.
+    # Presence only — never the values.
     return {
         "ok": not failed,
         "loaded": loaded,
         "failed": failed,
         "database": dsn,
+        "ai": {
+            "gemini_key_set": bool(os.getenv("GEMINI_API_KEY")),
+        },
+        "storage": {
+            "supabase_url_set": bool(os.getenv("SUPABASE_URL")),
+            "service_key_set": bool(os.getenv("SUPABASE_SERVICE_KEY")),
+            "bucket": os.getenv("SUPABASE_BUCKET") or None,
+        },
     }
