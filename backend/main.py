@@ -1,19 +1,13 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+import importlib
 import os
-from db import init_db
-from auth import router as auth_router
-from subjects import router as subjects_router
-from materials import router as materials_router
-from tutor import router as tutor_router
-from branches import router as branches_router
-from milestones import router as milestones_router
-from quiz import router as quiz_router
-from agenda import router as agenda_router
-from settings import router as settings_router
+import traceback
+
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 app = FastAPI(title="Tugas API")
 
@@ -25,31 +19,55 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth_router)
-app.include_router(subjects_router)
-app.include_router(materials_router)
-app.include_router(tutor_router)
-app.include_router(branches_router)
-app.include_router(milestones_router)
-app.include_router(quiz_router)
-app.include_router(agenda_router)
-app.include_router(settings_router)
+# One failing import used to take the whole API down: a missing library in any
+# module meant /health and /auth returned 500 and the app looked entirely dead.
+# Each router is loaded independently so a broken one costs only its own routes,
+# and /health reports what failed instead of leaving it to the platform logs.
+ROUTERS = [
+    "auth", "subjects", "materials", "tutor",
+    "branches", "milestones", "quiz", "agenda", "settings",
+]
+
+loaded: list[str] = []
+failed: dict[str, str] = {}
+
+for name in ROUTERS:
+    try:
+        module = importlib.import_module(name)
+        app.include_router(module.router)
+        loaded.append(name)
+    except Exception as exc:
+        failed[name] = f"{type(exc).__name__}: {exc}"
+        traceback.print_exc()
+
 
 @app.on_event("startup")
 def startup():
-    init_db()
+    # A database that will not initialise must not stop the app from serving
+    # /health, which is the only way to see why from outside.
+    try:
+        from db import init_db
+        init_db()
+    except Exception as exc:
+        failed["db"] = f"{type(exc).__name__}: {exc}"
+        traceback.print_exc()
 
-from fastapi import Request
-from fastapi.responses import JSONResponse
-from llm import NoAPIKey
 
+try:
+    from llm import NoAPIKey
 
-@app.exception_handler(NoAPIKey)
-def _no_key(request: Request, exc: NoAPIKey):
-    # 402: the request was fine, it just cannot be paid for yet.
-    return JSONResponse(status_code=402, content={"detail": str(exc)})
+    @app.exception_handler(NoAPIKey)
+    def _no_key(request: Request, exc: NoAPIKey):
+        # 402: the request was fine, it just cannot be paid for yet.
+        return JSONResponse(status_code=402, content={"detail": str(exc)})
+except Exception:
+    traceback.print_exc()
 
 
 @app.get("/health")
 def health():
-    return {"ok": True}
+    return {
+        "ok": not failed,
+        "loaded": loaded,
+        "failed": failed,
+    }
