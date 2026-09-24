@@ -9,10 +9,12 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-# Vercel rewrites /api/* to this function but forwards the path unchanged, so
-# FastAPI has to know it is mounted there — without it every route 404s by
-# exactly that prefix, including /docs.
-app = FastAPI(title="Tugas API", root_path=os.getenv("ROOT_PATH", "/api"))
+app = FastAPI(title="Tugas API")
+
+# Vercel forwards /api/* to this function with the path intact, so the routes
+# have to carry that prefix. root_path does not do this — it only affects the
+# URLs shown in the docs, which is why setting it left every route 404ing.
+API_PREFIX = os.getenv("API_PREFIX", "/api")
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,7 +39,7 @@ failed: dict[str, str] = {}
 for name in ROUTERS:
     try:
         module = importlib.import_module(name)
-        app.include_router(module.router)
+        app.include_router(module.router, prefix=API_PREFIX)
         loaded.append(name)
     except Exception as exc:
         failed[name] = f"{type(exc).__name__}: {exc}"
@@ -67,7 +69,7 @@ except Exception:
     traceback.print_exc()
 
 
-@app.get("/health")
+@app.get(f"{API_PREFIX}/health")
 def health():
     return {
         "ok": not failed,
