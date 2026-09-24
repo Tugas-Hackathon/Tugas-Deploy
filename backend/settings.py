@@ -29,7 +29,7 @@ def read(user: str = Depends(current_user)):
         "key_hint": _hint(own),
         # Tells the UI whether AI works at all right now, without leaking the
         # server key's value.
-        "server_key_available": bool(os.getenv("OPENROUTER_API_KEY") or os.getenv("GEMINI_API_KEY")),
+        "server_key_available": bool(os.getenv("GEMINI_API_KEY")),
     }
 
 
@@ -38,8 +38,8 @@ def set_key(body: KeyBody, user: str = Depends(current_user)):
     key = body.key.strip()
     if not key:
         raise HTTPException(422, "key is empty")
-    if not (key.startswith("sk-or-") or key.startswith("AQ.") or key.startswith("AIza")):
-        raise HTTPException(422, "Please provide a valid OpenRouter (sk-or-...) or Google Gemini (AQ... / AIza...) key")
+    if not (key.startswith("AIza") or key.startswith("AQ.")):
+        raise HTTPException(422, "That does not look like a Google AI key — they start with AIza or AQ.")
 
     with get_db() as db:
         db.execute("UPDATE users SET openrouter_key=? WHERE address=?", (key, user))
