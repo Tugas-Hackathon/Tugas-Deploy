@@ -7,18 +7,10 @@ from openai import OpenAI
 
 T = TypeVar("T", bound=BaseModel)
 
-OPENROUTER_MODELS: dict[str, str] = {
-    "tutor":   "anthropic/claude-opus-5",
-    "rubric":  "anthropic/claude-opus-5",
-    "outline": "anthropic/claude-opus-5",
-    "ocr":     "google/gemini-flash-1.5",
-    "extract": "google/gemini-flash-1.5",
-    "plan":    "anthropic/claude-opus-5",
-    "quiz":    "anthropic/claude-opus-5",
-    "polish":  "anthropic/claude-opus-5",
-}
+DEFAULT_MODEL = "gemini-3.6-flash"
 
-GEMINI_MODELS: dict[str, str] = {
+# Per task rather than per call site, so changing a model is one line here.
+MODELS: dict[str, str] = {
     "tutor":   "gemini-3.6-flash",
     "rubric":  "gemini-3.6-flash",
     "outline": "gemini-3.6-flash",
@@ -40,10 +32,6 @@ class NoAPIKey(Exception):
     """No student key and no server key — the caller should point at Settings."""
 
 
-def _is_google_key(key: str) -> bool:
-    return key.startswith("AQ.") or key.startswith("AIza") or bool(os.getenv("GEMINI_API_KEY"))
-
-
 def _client_and_model_for(task: str, user: str | None) -> tuple[OpenAI, str]:
     """A student's own key wins; the server key is the fallback."""
     key = None
@@ -56,26 +44,17 @@ def _client_and_model_for(task: str, user: str | None) -> tuple[OpenAI, str]:
         if row:
             key = row["openrouter_key"]
 
-    key = key or os.getenv("GEMINI_API_KEY", "") or os.getenv("OPENROUTER_API_KEY", "")
+    key = key or os.getenv("GEMINI_API_KEY", "")
     if not key:
-        raise NoAPIKey("No API key configured. Add yours under Settings or .env.")
+        raise NoAPIKey("No Google AI key. Add yours under Settings to enable AI features.")
 
-    if _is_google_key(key):
-        client = OpenAI(
-            api_key=key,
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-            max_retries=2,
-        )
-        model = GEMINI_MODELS.get(task, "gemini-3.6-flash")
-    else:
-        client = OpenAI(
-            api_key=key,
-            base_url="https://openrouter.ai/api/v1",
-            max_retries=2,
-        )
-        model = OPENROUTER_MODELS.get(task, "openai/gpt-4o")
-
-    return client, model
+    # Google exposes an OpenAI-compatible endpoint, so the same client works.
+    client = OpenAI(
+        api_key=key,
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+        max_retries=2,
+    )
+    return client, MODELS.get(task, DEFAULT_MODEL)
 
 
 def chat(task: str, messages: list[dict], user: str | None = None) -> str:
