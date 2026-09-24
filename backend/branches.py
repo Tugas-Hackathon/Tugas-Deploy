@@ -221,9 +221,14 @@ def delete_branch(branch_id: int, user: str = Depends(current_user)):
         ).fetchone()
         if not owns:
             raise HTTPException(404, "branch not found")
-        # Milestones reference the branch, so they go first. Anything already
-        # anchored stays on-chain — that record is not ours to remove.
-        db.execute("DELETE FROM milestones WHERE branch_id=? AND user_id=?", (branch_id, user))
+        # Every table that references the branch has to be cleared first, or
+        # Postgres refuses the delete on the foreign key. Listing them here
+        # rather than relying on ON DELETE CASCADE keeps the deletion visible
+        # and scoped to this user's rows.
+        for table in ("quiz_attempts", "topic_mastery", "quizzes", "milestones"):
+            db.execute(f"DELETE FROM {table} WHERE branch_id=? AND user_id=?", (branch_id, user))
+        # Anything already anchored stays on-chain — that record is not ours
+        # to remove, and deleting the local row does not touch it.
         db.execute("DELETE FROM branches WHERE id=? AND user_id=?", (branch_id, user))
 
 
