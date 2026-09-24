@@ -9,7 +9,10 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-app = FastAPI(title="Tugas API")
+# Vercel rewrites /api/* to this function but forwards the path unchanged, so
+# FastAPI has to know it is mounted there — without it every route 404s by
+# exactly that prefix, including /docs.
+app = FastAPI(title="Tugas API", root_path=os.getenv("ROOT_PATH", "/api"))
 
 app.add_middleware(
     CORSMiddleware,
