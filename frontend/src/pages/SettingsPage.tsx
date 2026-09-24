@@ -33,7 +33,7 @@ export function SettingsPage() {
   }
 
   async function clear() {
-    if (!confirm("Remove your OpenRouter key?")) return
+    if (!confirm("Remove your Google AI key?")) return
     try {
       await api.clearOpenrouterKey()
       setSaved(false)
@@ -48,8 +48,8 @@ export function SettingsPage() {
     <div className="max-w-2xl mx-auto px-8 py-10">
       <h2 className="text-xl font-semibold mb-1" style={{ color: "var(--text)" }}>Settings</h2>
       <p className="text-sm mb-8" style={{ color: "var(--text-dim)" }}>
-        Connect your own AI key so the tutor, milestone planner and quiz generator run on your
-        account.
+        Connect your own Google AI key so the tutor, milestone planner and quiz generator run
+        on your account.
       </p>
 
       {!aiWorks && state && (
@@ -67,7 +67,7 @@ export function SettingsPage() {
         style={{ background: "var(--surface)", border: "1px solid var(--surface-border)" }}>
         <div className="flex items-center gap-2 mb-2">
           <FontAwesomeIcon icon={faKey} className="text-xs" style={{ color: "var(--accent-bright)" }} />
-          <h3 className="text-sm font-semibold" style={{ color: "var(--text)" }}>OpenRouter API key</h3>
+          <h3 className="text-sm font-semibold" style={{ color: "var(--text)" }}>Google AI API key</h3>
           {hasOwn
             ? <Pill tone="teal">connected {state.key_hint}</Pill>
             : state?.server_key_available
@@ -76,14 +76,14 @@ export function SettingsPage() {
         </div>
 
         <p className="text-xs mb-5 leading-relaxed" style={{ color: "var(--text-dim)" }}>
-          Tugas calls Claude and Gemini through OpenRouter. Your key stays on your own account,
-          so you control the spend and see exactly what each request costs.
+          Tugas runs on Google Gemini. Your key stays on your own account, so you control the
+          spend and see exactly what each request costs.
         </p>
 
         <div className="flex gap-2">
           <input type="password" value={key} onChange={e => { setKey(e.target.value); setSaved(false) }}
             onKeyDown={e => e.key === "Enter" && save()}
-            placeholder="sk-or-v1-…"
+            placeholder="AIza…"
             autoComplete="off" spellCheck={false}
             className="flex-1 min-w-0 rounded-xl px-4 py-2.5 text-sm font-mono outline-none"
             style={{ background: "var(--input-bg)", color: "var(--text)", border: "1px solid var(--input-border)" }} />
@@ -103,10 +103,10 @@ export function SettingsPage() {
         {error && <p className="text-xs mt-3" style={{ color: "var(--red)" }}>{error}</p>}
 
         <div className="flex items-center gap-4 mt-5 pt-4" style={{ borderTop: "1px solid var(--surface-border)" }}>
-          <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer"
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer"
             className="text-xs hover:underline flex items-center gap-1.5"
             style={{ color: "var(--accent-bright)" }}>
-            Get a key from OpenRouter
+            Get a free key from Google AI Studio
             <FontAwesomeIcon icon={faUpRightFromSquare} className="text-[9px]" />
           </a>
           {hasOwn && (
@@ -122,7 +122,7 @@ export function SettingsPage() {
       </div>
 
       <p className="text-xs mt-5 px-1 leading-relaxed" style={{ color: "var(--text-faint)" }}>
-        Your key is stored against your wallet address and sent only to OpenRouter. It is never
+        Your key is stored against your wallet address and sent only to Google. It is never
         shown again after saving — only the last four characters, so you can tell which key is
         connected.
       </p>
