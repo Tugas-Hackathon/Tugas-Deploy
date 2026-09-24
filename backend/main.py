@@ -69,6 +69,29 @@ except Exception:
     traceback.print_exc()
 
 
+@app.get(f"{API_PREFIX}/storage-probe")
+def storage_probe():
+    """Round-trips a few bytes through the bucket. Upload failures otherwise
+    surface only as a 500 with no detail, which is not diagnosable from the
+    browser."""
+    import storage, uuid
+    key = f"_probe/{uuid.uuid4()}.txt"
+    try:
+        ref = storage.put(key, b"tugas probe", "text/plain")
+    except Exception as exc:
+        return {"ok": False, "stage": "put", "error": f"{type(exc).__name__}: {exc}"}
+    try:
+        data = storage.get(ref)
+    except Exception as exc:
+        return {"ok": False, "stage": "get", "error": f"{type(exc).__name__}: {exc}", "ref": ref}
+    finally:
+        try:
+            storage.delete(ref)
+        except Exception:
+            pass
+    return {"ok": True, "ref": ref, "read_back": len(data)}
+
+
 @app.get(f"{API_PREFIX}/health")
 def health():
     # Shape of the database URL only — scheme, host, port, user. Never the
