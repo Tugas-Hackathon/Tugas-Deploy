@@ -32,21 +32,12 @@ class NoAPIKey(Exception):
     """No student key and no server key — the caller should point at Settings."""
 
 
-def _client_and_model_for(task: str, user: str | None) -> tuple[OpenAI, str]:
-    """A student's own key wins; the server key is the fallback."""
-    key = None
-    if user:
-        from db import get_db
-        with get_db() as db:
-            row = db.execute(
-                "SELECT openrouter_key FROM users WHERE address=?", (user,)
-            ).fetchone()
-        if row:
-            key = row["openrouter_key"]
-
-    key = key or os.getenv("GEMINI_API_KEY", "")
+def _client_and_model_for(task: str, user: str | None = None) -> tuple[OpenAI, str]:
+    """One server key for everyone. Students do not supply their own, so there is
+    nothing to misconfigure during a demo."""
+    key = os.getenv("GEMINI_API_KEY", "")
     if not key:
-        raise NoAPIKey("No Google AI key. Add yours under Settings to enable AI features.")
+        raise NoAPIKey("GEMINI_API_KEY is not set on the server.")
 
     # Google exposes an OpenAI-compatible endpoint, so the same client works.
     client = OpenAI(
