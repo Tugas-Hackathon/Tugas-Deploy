@@ -5,7 +5,6 @@ import {
   faPaperclip, faRobot, faFileLines, faSun, faMoon,
   faMagnifyingGlass, faXmark, faTrash, faCalendarDays,
 } from "@fortawesome/free-solid-svg-icons"
-import { faWhatsapp } from "@fortawesome/free-brands-svg-icons"
 import { api } from "../lib/api"
 import { ConnectButton } from "./ConnectButton"
 import { useTheme } from "../contexts/theme"
@@ -246,16 +245,6 @@ export function Sidebar({ view, onNavigate, onCrumb }: Props) {
           <FontAwesomeIcon icon={faCalendarDays} className="text-[11px]" style={{ color: "var(--accent-bright)" }} />
           <span className="flex-1 text-left">Calendar</span>
         </button>
-        <button onClick={() => go({ type: "whatsapp" }, "WhatsApp")}
-          className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs transition-colors"
-          style={{
-            background: isActive({ type: "whatsapp" }) ? "var(--teal-soft)" : "var(--surface)",
-            border: `1px solid ${isActive({ type: "whatsapp" }) ? "var(--teal-border)" : "var(--surface-border)"}`,
-            color: isActive({ type: "whatsapp" }) ? "var(--teal)" : "var(--text-dim)",
-          }}>
-          <FontAwesomeIcon icon={faWhatsapp} className="text-[11px]" style={{ color: "var(--teal)" }} />
-          <span className="flex-1 text-left">WhatsApp</span>
-        </button>
         <button onClick={toggle}
           className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs transition-colors"
           style={{ background: "var(--surface)", border: "1px solid var(--surface-border)", color: "var(--text-dim)" }}
@@ -267,6 +256,18 @@ export function Sidebar({ view, onNavigate, onCrumb }: Props) {
           <Kbd>⌘L</Kbd>
         </button>
         <ConnectButton compact />
+        <div className="pt-1.5 px-1 flex items-center justify-between text-[10px] font-mono tracking-wide"
+          style={{ color: "var(--text-faint)" }}>
+          <a href="https://botchain.ai/" target="_blank" rel="noopener noreferrer"
+            className="transition-colors hover:underline hover:text-[var(--accent-bright)]">
+            BOT Chain ↗
+          </a>
+          <span>•</span>
+          <a href="https://scan.botchain.ai/" target="_blank" rel="noopener noreferrer"
+            className="transition-colors hover:underline hover:text-[var(--accent-bright)]">
+            BOTScan ↗
+          </a>
+        </div>
       </div>
     </aside>
   )

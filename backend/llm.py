@@ -1,12 +1,13 @@
 import os
 from pathlib import Path
 from typing import TypeVar
+from fastapi import HTTPException
 from pydantic import BaseModel
 from openai import OpenAI
 
 T = TypeVar("T", bound=BaseModel)
 
-TASK_MODELS: dict[str, str] = {
+OPENROUTER_MODELS: dict[str, str] = {
     "tutor":   "anthropic/claude-opus-5",
     "rubric":  "anthropic/claude-opus-5",
     "outline": "anthropic/claude-opus-5",
@@ -15,6 +16,17 @@ TASK_MODELS: dict[str, str] = {
     "plan":    "anthropic/claude-opus-5",
     "quiz":    "anthropic/claude-opus-5",
     "polish":  "anthropic/claude-opus-5",
+}
+
+GEMINI_MODELS: dict[str, str] = {
+    "tutor":   "gemini-3.6-flash",
+    "rubric":  "gemini-3.6-flash",
+    "outline": "gemini-3.6-flash",
+    "ocr":     "gemini-3.6-flash",
+    "extract": "gemini-3.6-flash",
+    "plan":    "gemini-3.6-flash",
+    "quiz":    "gemini-3.6-flash",
+    "polish":  "gemini-3.6-flash",
 }
 
 _FIXTURES_DIR = Path(__file__).parent / "tests" / "fixtures" / "llm"
@@ -28,7 +40,11 @@ class NoAPIKey(Exception):
     """No student key and no server key — the caller should point at Settings."""
 
 
-def _client_for(user: str | None) -> OpenAI:
+def _is_google_key(key: str) -> bool:
+    return key.startswith("AQ.") or key.startswith("AIza") or bool(os.getenv("GEMINI_API_KEY"))
+
+
+def _client_and_model_for(task: str, user: str | None) -> tuple[OpenAI, str]:
     """A student's own key wins; the server key is the fallback."""
     key = None
     if user:
@@ -40,15 +56,26 @@ def _client_for(user: str | None) -> OpenAI:
         if row:
             key = row["openrouter_key"]
 
-    key = key or os.getenv("OPENROUTER_API_KEY", "")
+    key = key or os.getenv("GEMINI_API_KEY", "") or os.getenv("OPENROUTER_API_KEY", "")
     if not key:
-        raise NoAPIKey("No OpenRouter key. Add yours under Settings to enable AI features.")
+        raise NoAPIKey("No API key configured. Add yours under Settings or .env.")
 
-    return OpenAI(api_key=key, base_url="https://openrouter.ai/api/v1", max_retries=2)
+    if _is_google_key(key):
+        client = OpenAI(
+            api_key=key,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+            max_retries=2,
+        )
+        model = GEMINI_MODELS.get(task, "gemini-3.6-flash")
+    else:
+        client = OpenAI(
+            api_key=key,
+            base_url="https://openrouter.ai/api/v1",
+            max_retries=2,
+        )
+        model = OPENROUTER_MODELS.get(task, "openai/gpt-4o")
 
-
-def _model_for(task: str) -> str:
-    return TASK_MODELS.get(task, "openai/gpt-4o")
+    return client, model
 
 
 def chat(task: str, messages: list[dict], user: str | None = None) -> str:
@@ -58,12 +85,16 @@ def chat(task: str, messages: list[dict], user: str | None = None) -> str:
             return fixture.read_text()
         raise FileNotFoundError(f"fixture missing: {fixture}")
 
-    model = _model_for(task)
-    resp = _client_for(user).chat.completions.create(
-        model=model,
-        messages=messages,
-        timeout=60,
-    )
+    client, model = _client_and_model_for(task, user)
+    try:
+        resp = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            timeout=60,
+        )
+    except Exception as e:
+        raise HTTPException(502, f"AI Provider error ({model}): {e}")
+
     content = resp.choices[0].message.content if resp.choices else None
     if not content:
         raise LLMDeclined("model returned empty content")
@@ -77,18 +108,19 @@ def parse(task: str, prompt: str, schema: type[T], user: str | None = None) -> T
             return schema.model_validate_json(fixture.read_text())
         raise FileNotFoundError(f"fixture missing: {fixture}")
 
-    model = _model_for(task)
+    client, model = _client_and_model_for(task, user)
     schema_json = schema.model_json_schema()
 
-    client = _client_for(user)
-
     def _call(messages):
-        return client.chat.completions.create(
-            model=model,
-            messages=messages,
-            response_format={"type": "json_schema", "json_schema": {"name": schema.__name__, "schema": schema_json, "strict": True}},
-            timeout=60,
-        )
+        try:
+            return client.chat.completions.create(
+                model=model,
+                messages=messages,
+                response_format={"type": "json_schema", "json_schema": {"name": schema.__name__, "schema": schema_json, "strict": True}},
+                timeout=60,
+            )
+        except Exception as e:
+            raise HTTPException(502, f"AI Provider error ({model}): {e}")
 
     messages = [{"role": "user", "content": prompt}]
     resp = _call(messages)
@@ -106,3 +138,4 @@ def parse(task: str, prompt: str, schema: type[T], user: str | None = None) -> T
         if not content2:
             raise LLMDeclined("model declined on retry")
         return schema.model_validate_json(content2)
+

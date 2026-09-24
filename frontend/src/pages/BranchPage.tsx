@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faWandMagicSparkles, faRotate, faFileArrowUp } from "@fortawesome/free-solid-svg-icons"
+import {
+  faWandMagicSparkles,
+  faRotate,
+  faFileArrowUp,
+  faFilePdf,
+  faFileWord,
+  faDownload,
+  faCircleCheck,
+} from "@fortawesome/free-solid-svg-icons"
 import { api } from "../lib/api"
 import { MilestoneCard } from "../components/MilestoneCard"
 import { ChatBox } from "../components/ChatBox"
@@ -19,6 +27,39 @@ export function BranchPage({ id }: { id: number; onBack?: () => void }) {
   const [manual, setManual] = useState(false)
   const briefFileRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
+
+  const [exportingPdf, setExportingPdf] = useState(false)
+  const [exportingDocx, setExportingDocx] = useState(false)
+  const [exportError, setExportError] = useState("")
+
+  const anchoredCount = milestones.filter(m => m.tx_hash).length
+  const allAnchored = milestones.length > 0 && anchoredCount === milestones.length
+
+  async function handleExportPdf() {
+    if (exportingPdf) return
+    setExportingPdf(true)
+    setExportError("")
+    try {
+      await api.downloadBranchPdf(id, `${branch?.title || "Assignment"}_Proof_of_Learning.pdf`)
+    } catch (e: any) {
+      setExportError(e.message || "Failed to download PDF report")
+    } finally {
+      setExportingPdf(false)
+    }
+  }
+
+  async function handleExportDocx() {
+    if (exportingDocx) return
+    setExportingDocx(true)
+    setExportError("")
+    try {
+      await api.downloadBranchDocx(id, `${branch?.title || "Assignment"}_Proof_of_Learning.docx`)
+    } catch (e: any) {
+      setExportError(e.message || "Failed to download Word document")
+    } finally {
+      setExportingDocx(false)
+    }
+  }
 
   async function generatePlan() {
     if (!brief.trim()) return
@@ -60,12 +101,39 @@ export function BranchPage({ id }: { id: number; onBack?: () => void }) {
 
   return (
     <div className="max-w-3xl mx-auto px-8 py-9">
-      <div className="flex items-center gap-3 mb-1">
-        <h2 className="text-xl font-semibold" style={{ color: "var(--text)" }}>{branch?.title ?? "…"}</h2>
-        {branch?.kind && <Pill tone="accent">{branch.kind}</Pill>}
+      <div className="flex items-center justify-between gap-3 mb-1">
+        <div className="flex items-center gap-3 min-w-0">
+          <h2 className="text-xl font-semibold truncate" style={{ color: "var(--text)" }}>{branch?.title ?? "…"}</h2>
+          {branch?.kind && <Pill tone="accent">{branch.kind}</Pill>}
+        </div>
+        {anchoredCount > 0 && (
+          <div className="shrink-0 flex items-center gap-2">
+            <button onClick={handleExportPdf} disabled={exportingPdf}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+              style={{
+                background: allAnchored ? "linear-gradient(135deg,#0d9488,#059669)" : "var(--accent-soft)",
+                color: allAnchored ? "#ffffff" : "var(--accent-bright)",
+                border: allAnchored ? "1px solid var(--teal-border)" : "1px solid var(--accent-border)",
+                boxShadow: allAnchored ? "0 0 14px rgba(13, 148, 136, 0.3)" : "none",
+              }}>
+              <FontAwesomeIcon icon={exportingPdf ? faRotate : faFilePdf} className={exportingPdf ? "animate-spin" : ""} />
+              {exportingPdf ? "Exporting…" : "PDF"}
+            </button>
+            <button onClick={handleExportDocx} disabled={exportingDocx}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+              style={{
+                background: "var(--surface)",
+                color: "var(--text)",
+                border: "1px solid var(--surface-border)",
+              }}>
+              <FontAwesomeIcon icon={exportingDocx ? faRotate : faFileWord} className={exportingDocx ? "animate-spin" : ""} />
+              {exportingDocx ? "Exporting…" : "Word (.docx)"}
+            </button>
+          </div>
+        )}
       </div>
       <p className="text-xs font-mono mb-6" style={{ color: "var(--text-faint)" }}>
-        {milestones.length} milestone{milestones.length === 1 ? "" : "s"} · {milestones.filter(m => m.tx_hash).length} anchored
+        {milestones.length} milestone{milestones.length === 1 ? "" : "s"} · {anchoredCount} anchored
       </p>
 
       {/* Glass tab bar */}
@@ -89,6 +157,55 @@ export function BranchPage({ id }: { id: number; onBack?: () => void }) {
 
       {tab === "milestones" && !isExam && (
         <div>
+          {allAnchored && (
+            <div className="rounded-2xl p-6 mb-6"
+              style={{
+                background: "linear-gradient(135deg, rgba(13, 148, 136, 0.14), rgba(109, 40, 217, 0.14))",
+                border: "1px solid var(--teal-border)",
+                boxShadow: "0 0 28px rgba(13, 148, 136, 0.18)",
+              }}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <FontAwesomeIcon icon={faCircleCheck} className="text-2xl mt-0.5" style={{ color: "var(--teal)" }} />
+                  <div>
+                    <h4 className="font-semibold text-base mb-1" style={{ color: "var(--text)" }}>
+                      All Milestones Anchored & Cryptographically Sealed!
+                    </h4>
+                    <p className="text-xs" style={{ color: "var(--text-dim)" }}>
+                      Every milestone draft is committed to BOT Chain with Keccak-256 integrity proofs. Export your final compiled coursework:
+                    </p>
+                  </div>
+                </div>
+                <div className="shrink-0 flex items-center gap-2.5">
+                  <button onClick={handleExportPdf} disabled={exportingPdf}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium text-white transition-all shadow-md"
+                    style={{
+                      background: "linear-gradient(135deg, #0d9488, #059669)",
+                      boxShadow: "0 0 16px rgba(13, 148, 136, 0.4)",
+                    }}>
+                    <FontAwesomeIcon icon={exportingPdf ? faRotate : faDownload} className={exportingPdf ? "animate-spin" : ""} />
+                    {exportingPdf ? "Generating PDF…" : "Export PDF"}
+                  </button>
+                  <button onClick={handleExportDocx} disabled={exportingDocx}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium text-white transition-all shadow-md"
+                    style={{
+                      background: "linear-gradient(135deg, #7c3aed, #6d28d9)",
+                      boxShadow: "0 0 16px rgba(124, 58, 237, 0.4)",
+                    }}>
+                    <FontAwesomeIcon icon={exportingDocx ? faRotate : faFileWord} className={exportingDocx ? "animate-spin" : ""} />
+                    {exportingDocx ? "Generating Word…" : "Export Word (.docx)"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {exportError && (
+            <p className="text-xs mb-4 px-1" style={{ color: "var(--red)" }}>
+              {exportError}
+            </p>
+          )}
+
           {milestones.length === 0 ? (
             <div className="rounded-2xl p-7"
               style={{ background: "var(--surface)", border: "1px solid var(--surface-border)" }}>
@@ -184,7 +301,14 @@ export function BranchPage({ id }: { id: number; onBack?: () => void }) {
                       )}
                     </div>
                   )}
-                  <MilestoneCard milestone={m} />
+                  <MilestoneCard
+                    milestone={m}
+                    onAnchored={(mId, txHash) => {
+                      setMilestones(prev =>
+                        prev.map(item => (item.id === mId ? { ...item, tx_hash: txHash } : item))
+                      )
+                    }}
+                  />
                 </div>
               ))}
             </div>

@@ -93,6 +93,46 @@ export const api = {
   rubricCheck: (bid: number, draft: string) =>
     req("POST", `/branches/${bid}/rubric-check`, { draft }),
 
+  downloadBranchPdf: async (bid: number, filename = "Proof_of_Learning.pdf") => {
+    const r = await fetch(`${BASE}/branches/${bid}/export-pdf`, {
+      headers: { Authorization: `Bearer ${token()}` },
+    })
+    if (!r.ok) throw new Error(await errorText(r))
+    const disposition = r.headers.get("Content-Disposition")
+    let downloadName = filename
+    if (disposition && disposition.includes("filename=")) {
+      const match = disposition.match(/filename="?([^";]+)"?/)
+      if (match?.[1]) downloadName = match[1]
+    }
+    const blob = await r.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = downloadName
+    a.click()
+    URL.revokeObjectURL(url)
+  },
+
+  downloadBranchDocx: async (bid: number, filename = "Proof_of_Learning.docx") => {
+    const r = await fetch(`${BASE}/branches/${bid}/export-docx`, {
+      headers: { Authorization: `Bearer ${token()}` },
+    })
+    if (!r.ok) throw new Error(await errorText(r))
+    const disposition = r.headers.get("Content-Disposition")
+    let downloadName = filename
+    if (disposition && disposition.includes("filename=")) {
+      const match = disposition.match(/filename="?([^";]+)"?/)
+      if (match?.[1]) downloadName = match[1]
+    }
+    const blob = await r.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = downloadName
+    a.click()
+    URL.revokeObjectURL(url)
+  },
+
   settings: () => req("GET", "/settings"),
   setOpenrouterKey: (key: string) => req("PUT", "/settings/openrouter", { key }),
   clearOpenrouterKey: () => req("DELETE", "/settings/openrouter"),
@@ -140,25 +180,12 @@ export const api = {
     rubric: string,
     ai_assist_level: number,
   ) => req("POST", `/milestones/${mid}/hash`, { draft, brief, rubric, ai_assist_level }),
-  polishMilestone: (mid: number, draft: string, instruction?: string) =>
-    req("POST", `/milestones/${mid}/polish`, { draft, instruction }),
   anchored: (mid: number, tx_hash: string) =>
     req("POST", `/milestones/${mid}/anchored`, { tx_hash }),
+  polishMilestone: (mid: number, draft: string, instruction?: string) =>
+    req("POST", `/milestones/${mid}/polish`, { draft, instruction }),
 
   ask: (sid: number, question: string) =>
     req("POST", `/subjects/${sid}/ask`, { question }),
 
-  waStart: () => req("POST", "/whatsapp/session"),
-  waStatus: () => req("GET", "/whatsapp/session"),
-  waGroups: () => req("GET", "/whatsapp/groups"),
-  waSenders: (chatId: string) => req("GET", `/whatsapp/senders?chat_id=${encodeURIComponent(chatId)}`),
-  waLogout: () => req("DELETE", "/whatsapp/session"),
-  waLinks: () => req("GET", "/whatsapp/links"),
-  waSetLink: (subjectId: number, body: {
-    chat_id: string; chat_name: string
-    focus_sender?: string | null; focus_sender_name?: string | null
-  }) => req("PUT", `/whatsapp/links/${subjectId}`, body),
-  waClearLink: (subjectId: number) => req("DELETE", `/whatsapp/links/${subjectId}`),
-  waSync: () => req("POST", "/whatsapp/sync"),
-  waContext: (subjectId: number) => req("GET", `/whatsapp/context/${subjectId}`),
 }

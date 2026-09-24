@@ -116,12 +116,25 @@ def anchored(milestone_id: int, body: AnchoredBody, user: str = Depends(current_
     if not ms["work_hash"]:
         raise HTTPException(400, "call /hash first")
 
-    try:
-        result = _rpc("eth_getTransactionReceipt", [body.tx_hash])
-    except Exception as e:
-        raise HTTPException(502, f"RPC error: {e}")
+    rpcs_to_try = [RPC_URL]
+    if "bohr.life" in RPC_URL:
+        rpcs_to_try.append("https://rpc.botchain.ai")
+    elif "botchain.ai" in RPC_URL:
+        rpcs_to_try.append("https://rpc.bohr.life")
 
-    receipt = result.get("result")
+    receipt = None
+    for url in rpcs_to_try:
+        try:
+            payload = json.dumps({"jsonrpc": "2.0", "method": "eth_getTransactionReceipt", "params": [body.tx_hash], "id": 1}).encode()
+            req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                res = json.loads(resp.read())
+                if res.get("result"):
+                    receipt = res["result"]
+                    break
+        except Exception:
+            continue
+
     if not receipt:
         raise HTTPException(400, "tx not found or not confirmed yet")
     if receipt.get("status") != "0x1":
@@ -134,7 +147,7 @@ def anchored(milestone_id: int, body: AnchoredBody, user: str = Depends(current_
         None,
     )
     if not log:
-        raise HTTPException(400, "MilestoneCommitted event not found in tx")
+        raise HTTPException(400, "MilestoneCommitted event not found in tx (verify contract was called on the correct network)")
 
     data = bytes.fromhex(log["data"][2:])
     on_chain_work = "0x" + data[0:32].hex()

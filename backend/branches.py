@@ -1,12 +1,14 @@
-import tempfile
+import tempfile, re
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Response
 from pydantic import BaseModel
 from typing import Optional
 from db import get_db
 from auth import current_user
 from llm import parse, LLMDeclined
 from materials import _extract_text
+from pdf_export import generate_milestone_pdf
+from docx_export import generate_milestone_docx
 
 PLAN_EXTS = {".pdf", ".docx", ".txt", ".md"}
 MAX_BRIEF_BYTES = 10 * 1024 * 1024
@@ -95,6 +97,82 @@ def get_branch(branch_id: int, user: str = Depends(current_user)):
     if not row:
         raise HTTPException(404, "not found")
     return _row(row)
+
+
+@router.get("/branches/{branch_id}/export-pdf")
+def export_branch_pdf(branch_id: int, user: str = Depends(current_user)):
+    with get_db() as db:
+        br = db.execute(
+            "SELECT id,subject_id,kind,title,due_at,created_at FROM branches "
+            "WHERE id=? AND user_id=?", (branch_id, user)
+        ).fetchone()
+        if not br:
+            raise HTTPException(404, "branch not found")
+
+        sub = db.execute(
+            "SELECT id,name FROM subjects WHERE id=? AND user_id=?", (br["subject_id"], user)
+        ).fetchone() or {"name": "General"}
+
+        milestones = db.execute(
+            "SELECT id,branch_id,title,draft_text,work_hash,context_hash,ai_assist_level,"
+            "chain_commit_id,tx_hash,created_at FROM milestones "
+            "WHERE branch_id=? AND user_id=? ORDER BY created_at ASC, id ASC",
+            (branch_id, user),
+        ).fetchall()
+
+    if not milestones:
+        raise HTTPException(400, "No milestones found for this branch")
+
+    pdf_bytes = generate_milestone_pdf(_row(br), _row(sub), [_row(m) for m in milestones], user)
+    clean_title = re.sub(r"[^\w\-_\. ]", "_", br["title"]).strip() or "assignment"
+    filename = f"{clean_title}_Proof_of_Learning.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Access-Control-Expose-Headers": "Content-Disposition",
+        },
+    )
+
+
+@router.get("/branches/{branch_id}/export-docx")
+def export_branch_docx(branch_id: int, user: str = Depends(current_user)):
+    with get_db() as db:
+        br = db.execute(
+            "SELECT id,subject_id,kind,title,due_at,created_at FROM branches "
+            "WHERE id=? AND user_id=?", (branch_id, user)
+        ).fetchone()
+        if not br:
+            raise HTTPException(404, "branch not found")
+
+        sub = db.execute(
+            "SELECT id,name FROM subjects WHERE id=? AND user_id=?", (br["subject_id"], user)
+        ).fetchone() or {"name": "General"}
+
+        milestones = db.execute(
+            "SELECT id,branch_id,title,draft_text,work_hash,context_hash,ai_assist_level,"
+            "chain_commit_id,tx_hash,created_at FROM milestones "
+            "WHERE branch_id=? AND user_id=? ORDER BY created_at ASC, id ASC",
+            (branch_id, user),
+        ).fetchall()
+
+    if not milestones:
+        raise HTTPException(400, "No milestones found for this branch")
+
+    docx_bytes = generate_milestone_docx(_row(br), _row(sub), [_row(m) for m in milestones], user)
+    clean_title = re.sub(r"[^\w\-_\. ]", "_", br["title"]).strip() or "assignment"
+    filename = f"{clean_title}_Proof_of_Learning.docx"
+
+    return Response(
+        content=docx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Access-Control-Expose-Headers": "Content-Disposition",
+        },
+    )
 
 
 @router.post("/branches/{branch_id}/outline")

@@ -26,7 +26,20 @@ def _to_pg(sql: str) -> str:
 
 if IS_PG:
     import psycopg
-    from psycopg.rows import dict_row
+
+    class _Row(dict):
+        """Allows access by column name (row['title']) and by index (row[0]),
+        matching sqlite3.Row behavior."""
+        def __getitem__(self, item):
+            if isinstance(item, int):
+                return list(self.values())[item]
+            return super().__getitem__(item)
+
+    def _row_factory(cursor):
+        fields = [c.name for c in cursor.description] if cursor.description else []
+        def make_row(values):
+            return _Row(zip(fields, values))
+        return make_row
 
     class _Cur:
         """Wraps a psycopg cursor so callers keep using sqlite3's shape:
@@ -74,7 +87,7 @@ if IS_PG:
     def _connect():
         # Supabase's pooler expects one short-lived connection per request,
         # which is also what a serverless invocation gives us.
-        return _Conn(psycopg.connect(DATABASE_URL, row_factory=dict_row, autocommit=False))
+        return _Conn(psycopg.connect(DATABASE_URL, row_factory=_row_factory, autocommit=False))
 
 else:
     def _connect() -> sqlite3.Connection:
