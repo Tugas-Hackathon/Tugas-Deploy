@@ -71,8 +71,28 @@ except Exception:
 
 @app.get(f"{API_PREFIX}/health")
 def health():
+    # Shape of the database URL only — scheme, host, port, user. Never the
+    # password, which is why this is safe to return from a public endpoint.
+    dsn = {}
+    raw = os.getenv("DATABASE_URL", "")
+    if raw:
+        try:
+            from urllib.parse import urlsplit
+            u = urlsplit(raw)
+            dsn = {
+                "host": u.hostname,
+                "port": u.port,
+                "user": u.username,
+                "pooler": bool(u.hostname and "pooler" in u.hostname),
+            }
+        except Exception as exc:
+            dsn = {"parse_error": str(exc)}
+    else:
+        dsn = {"set": False}
+
     return {
         "ok": not failed,
         "loaded": loaded,
         "failed": failed,
+        "database": dsn,
     }
