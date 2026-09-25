@@ -127,15 +127,14 @@ export function Sidebar({ view, onNavigate, onCrumb, mobileOpen = false, onMobil
       {/* Brand */}
       <div className="px-4 pt-4 pb-3 flex items-center gap-3"
         style={{ borderBottom: "1px solid var(--panel-border)" }}>
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
           style={{
-            background: "linear-gradient(135deg,#8b5cf6,#6d28d9)",
             boxShadow: "0 0 18px var(--accent-glow)",
           }}>
-          <span className="text-white text-sm font-bold">T</span>
+          <img src="/tugas_icon.png" alt="TugasOS" className="w-full h-full object-cover" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold leading-tight" style={{ color: "var(--text)" }}>Tugas</div>
+          <div className="text-sm font-semibold leading-tight" style={{ color: "var(--text)" }}>TugasOS</div>
           <div className="text-[9px] font-mono uppercase tracking-[0.18em] leading-tight" style={{ color: "var(--text-faint)" }}>
             Smart Glass OS
           </div>

@@ -10,5 +10,3 @@ pydantic>=2.8
 python-dotenv>=1.0
 apscheduler>=3.10
 psycopg[binary]>=3.2
-eth-utils>=4.0
-reportlab>=4.0

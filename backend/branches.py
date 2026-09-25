@@ -7,6 +7,8 @@ from db import get_db
 from auth import current_user
 from llm import parse, LLMDeclined
 from materials import _extract_text
+from pdf_export import generate_milestone_pdf
+from docx_export import generate_milestone_docx
 
 PLAN_EXTS = {".pdf", ".docx", ".txt", ".md"}
 MAX_BRIEF_BYTES = 10 * 1024 * 1024
@@ -121,10 +123,6 @@ def export_branch_pdf(branch_id: int, user: str = Depends(current_user)):
     if not milestones:
         raise HTTPException(400, "No milestones found for this branch")
 
-    # Imported here rather than at module load: these pull in reportlab and
-    # python-docx, and a missing export library should break export alone
-    # instead of taking down every route in the app.
-    from pdf_export import generate_milestone_pdf
     pdf_bytes = generate_milestone_pdf(_row(br), _row(sub), [_row(m) for m in milestones], user)
     clean_title = re.sub(r"[^\w\-_\. ]", "_", br["title"]).strip() or "assignment"
     filename = f"{clean_title}_Proof_of_Learning.pdf"
@@ -163,7 +161,6 @@ def export_branch_docx(branch_id: int, user: str = Depends(current_user)):
     if not milestones:
         raise HTTPException(400, "No milestones found for this branch")
 
-    from docx_export import generate_milestone_docx
     docx_bytes = generate_milestone_docx(_row(br), _row(sub), [_row(m) for m in milestones], user)
     clean_title = re.sub(r"[^\w\-_\. ]", "_", br["title"]).strip() or "assignment"
     filename = f"{clean_title}_Proof_of_Learning.docx"
@@ -221,14 +218,9 @@ def delete_branch(branch_id: int, user: str = Depends(current_user)):
         ).fetchone()
         if not owns:
             raise HTTPException(404, "branch not found")
-        # Every table that references the branch has to be cleared first, or
-        # Postgres refuses the delete on the foreign key. Listing them here
-        # rather than relying on ON DELETE CASCADE keeps the deletion visible
-        # and scoped to this user's rows.
-        for table in ("quiz_attempts", "topic_mastery", "quizzes", "milestones"):
-            db.execute(f"DELETE FROM {table} WHERE branch_id=? AND user_id=?", (branch_id, user))
-        # Anything already anchored stays on-chain — that record is not ours
-        # to remove, and deleting the local row does not touch it.
+        # Milestones reference the branch, so they go first. Anything already
+        # anchored stays on-chain — that record is not ours to remove.
+        db.execute("DELETE FROM milestones WHERE branch_id=? AND user_id=?", (branch_id, user))
         db.execute("DELETE FROM branches WHERE id=? AND user_id=?", (branch_id, user))
 
 

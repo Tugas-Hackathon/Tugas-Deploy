@@ -40,14 +40,13 @@ export default function App() {
         {/* Top bar on landing */}
         <header className="relative z-10 w-full max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm text-white"
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center overflow-hidden"
               style={{
-                background: "linear-gradient(135deg,#8b5cf6,#6d28d9)",
                 boxShadow: "0 0 20px var(--accent-glow)",
               }}>
-              T
+              <img src="/tugas_icon.png" alt="TugasOS" className="w-full h-full object-cover" />
             </div>
-            <span className="font-bold tracking-tight text-base" style={{ color: "var(--text)" }}>Tugas</span>
+            <span className="font-bold tracking-tight text-base" style={{ color: "var(--text)" }}>TugasOS</span>
           </div>
 
           <div className="flex items-center gap-2 text-xs font-mono">
@@ -60,14 +59,13 @@ export default function App() {
 
         {/* Center Hero */}
         <div className="relative z-10 text-center my-auto py-10 max-w-lg mx-auto">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6"
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 overflow-hidden"
             style={{
-              background: "linear-gradient(135deg,#8b5cf6,#6d28d9)",
               boxShadow: "0 0 50px var(--accent-glow)",
             }}>
-            <span className="text-white text-2xl font-bold">T</span>
+            <img src="/tugas_icon.png" alt="TugasOS" className="w-full h-full object-cover" />
           </div>
-          <h1 className="text-5xl font-bold mb-3 tracking-tight" style={{ color: "var(--text)" }}>Tugas</h1>
+          <h1 className="text-5xl font-bold mb-3 tracking-tight" style={{ color: "var(--text)" }}>TugasOS</h1>
           <p className="text-[11px] font-mono uppercase tracking-[0.25em] mb-3" style={{ color: "var(--text-faint)" }}>
             Smart Glass OS
           </p>
