@@ -2,14 +2,14 @@ import { useState, useRef, useEffect } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faPaperPlane, faQuoteLeft } from "@fortawesome/free-solid-svg-icons"
 
-interface Citation {
+export interface Citation {
   chunk_id: string
   quote: string
   filename?: string
   page?: number
 }
 
-interface Message {
+export interface Message {
   role: "user" | "assistant"
   text: string
   citations?: Citation[]
@@ -19,14 +19,28 @@ interface Props {
   onSend: (question: string) => Promise<{ answer: string; citations: Citation[] }>
   placeholder?: string
   emptyHint?: string
+  initialMessages?: Message[]
+  loadingHistory?: boolean
 }
 
-export function ChatBox({ onSend, placeholder = "Ask a question…", emptyHint }: Props) {
-  const [messages, setMessages] = useState<Message[]>([])
+export function ChatBox({
+  onSend,
+  placeholder = "Ask a question…",
+  emptyHint,
+  initialMessages,
+  loadingHistory,
+}: Props) {
+  const [messages, setMessages] = useState<Message[]>(initialMessages ?? [])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (initialMessages) {
+      setMessages(initialMessages)
+    }
+  }, [initialMessages])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -56,11 +70,17 @@ export function ChatBox({ onSend, placeholder = "Ask a question…", emptyHint }
       style={{ background: "var(--surface)", border: "1px solid var(--surface-border)" }}>
 
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
-        {messages.length === 0 && (
+        {loadingHistory ? (
+          <div className="flex justify-center items-center h-32">
+            <span className="text-sm italic" style={{ color: "var(--text-faint)" }}>
+              Loading conversation…
+            </span>
+          </div>
+        ) : messages.length === 0 ? (
           <p className="text-sm text-center mt-10" style={{ color: "var(--text-faint)" }}>
             {emptyHint ?? "Ask anything about your materials."}
           </p>
-        )}
+        ) : null}
 
         {messages.map((m, i) => (
           <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>

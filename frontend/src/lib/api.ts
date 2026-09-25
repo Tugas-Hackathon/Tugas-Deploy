@@ -134,6 +134,8 @@ export const api = {
   },
 
   settings: () => req("GET", "/settings"),
+  setOpenrouterKey: (key: string) => req("PUT", "/settings/openrouter", { key }),
+  clearOpenrouterKey: () => req("DELETE", "/settings/openrouter"),
 
   agenda: () => req("GET", "/agenda"),
   createEvent: (body: { title: string; starts_at: number; ends_at?: number | null; kind?: string }) =>
@@ -185,5 +187,6 @@ export const api = {
 
   ask: (sid: number, question: string) =>
     req("POST", `/subjects/${sid}/ask`, { question }),
-
+  chatHistory: (sid: number) =>
+    req("GET", `/subjects/${sid}/chat`),
 }

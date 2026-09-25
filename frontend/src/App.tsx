@@ -8,7 +8,7 @@ import { useAuth } from "./hooks/useAuth"
 import { useTheme, vars } from "./contexts/theme"
 import { Sidebar } from "./components/Sidebar"
 import { ConnectButton } from "./components/ConnectButton"
-import { ChatBox } from "./components/ChatBox"
+import { ChatBox, type Message } from "./components/ChatBox"
 import { BranchPage } from "./pages/BranchPage"
 import { CalendarPage } from "./pages/CalendarPage"
 import { SettingsPage } from "./pages/SettingsPage"
@@ -438,9 +438,32 @@ function MaterialsView({ subjectId }: { subjectId: number }) {
 function TutorView({ subjectId }: { subjectId: number }) {
   const [materials, setMaterials] = useState<any[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [history, setHistory] = useState<Message[]>([])
+  const [historyLoading, setHistoryLoading] = useState(true)
 
   useEffect(() => {
-    api.materials(subjectId).then(m => { setMaterials(m); setLoaded(true) })
+    setLoaded(false)
+    setHistoryLoading(true)
+    setHistory([])
+
+    api.materials(subjectId).then(m => {
+      setMaterials(m)
+      setLoaded(true)
+    })
+
+    api.chatHistory(subjectId)
+      .then(res => {
+        const msgs: Message[] = (res?.messages || []).map((m: any) => ({
+          role: m.role,
+          text: m.content,
+          citations: m.citations,
+        }))
+        setHistory(msgs)
+      })
+      .catch(err => {
+        console.error("Failed to load chat history:", err)
+      })
+      .finally(() => setHistoryLoading(false))
   }, [subjectId])
 
   if (!loaded) return null
@@ -466,9 +489,12 @@ function TutorView({ subjectId }: { subjectId: number }) {
           </div>
         ) : (
           <ChatBox
+            key={subjectId}
             onSend={q => api.ask(subjectId, q)}
             placeholder="Ask anything about your notes…"
             emptyHint="Ask a question — the AI answers from your uploaded materials and cites the source."
+            initialMessages={history}
+            loadingHistory={historyLoading}
           />
         )}
       </div>
