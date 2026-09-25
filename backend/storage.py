@@ -4,7 +4,33 @@ from pathlib import Path
 # Supabase Storage in production, local disk otherwise. Vercel's filesystem is
 # ephemeral, so an uploaded PDF written to disk there is gone by the next
 # request.
-SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
+def _project_url() -> str:
+    """Supabase's REST base, https://<ref>.supabase.co.
+
+    SUPABASE_URL is sometimes set to the Postgres connection string instead,
+    which is not an HTTP URL at all. The project ref appears in both forms, so
+    derive it rather than failing with 'unknown url type: postgresql'.
+    """
+    from urllib.parse import urlsplit
+    import re as _re
+
+    for candidate in (os.getenv("SUPABASE_URL", ""), os.getenv("DATABASE_URL", "")):
+        if not candidate:
+            continue
+        if candidate.startswith("http"):
+            return candidate.rstrip("/")
+        host = urlsplit(candidate).hostname or ""
+        # db.<ref>.supabase.co, or <user>.<ref> on the pooler
+        m = _re.match(r"^db\.([a-z0-9]+)\.supabase\.co$", host)
+        if m:
+            return f"https://{m.group(1)}.supabase.co"
+        user = urlsplit(candidate).username or ""
+        if "." in user:
+            return f"https://{user.split('.', 1)[1]}.supabase.co"
+    return ""
+
+
+SUPABASE_URL = _project_url()
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
 BUCKET = os.getenv("SUPABASE_BUCKET", "materials")
 REMOTE = bool(SUPABASE_URL and SUPABASE_KEY)
