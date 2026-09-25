@@ -7,10 +7,18 @@ from openai import OpenAI
 
 T = TypeVar("T", bound=BaseModel)
 
-DEFAULT_MODEL = "gemini-3.6-flash"
+OPENROUTER_MODELS: dict[str, str] = {
+    "tutor":   "anthropic/claude-opus-5",
+    "rubric":  "anthropic/claude-opus-5",
+    "outline": "anthropic/claude-opus-5",
+    "ocr":     "google/gemini-flash-1.5",
+    "extract": "google/gemini-flash-1.5",
+    "plan":    "anthropic/claude-opus-5",
+    "quiz":    "anthropic/claude-opus-5",
+    "polish":  "anthropic/claude-opus-5",
+}
 
-# Per task rather than per call site, so changing a model is one line here.
-MODELS: dict[str, str] = {
+GEMINI_MODELS: dict[str, str] = {
     "tutor":   "gemini-3.6-flash",
     "rubric":  "gemini-3.6-flash",
     "outline": "gemini-3.6-flash",
@@ -20,6 +28,7 @@ MODELS: dict[str, str] = {
     "quiz":    "gemini-3.6-flash",
     "polish":  "gemini-3.6-flash",
 }
+
 
 _FIXTURES_DIR = Path(__file__).parent / "tests" / "fixtures" / "llm"
 
@@ -32,20 +41,32 @@ class NoAPIKey(Exception):
     """No student key and no server key — the caller should point at Settings."""
 
 
-def _client_and_model_for(task: str, user: str | None = None) -> tuple[OpenAI, str]:
-    """One server key for everyone. Students do not supply their own, so there is
-    nothing to misconfigure during a demo."""
-    key = os.getenv("GEMINI_API_KEY", "")
-    if not key:
-        raise NoAPIKey("GEMINI_API_KEY is not set on the server.")
+def _is_google_key(key: str) -> bool:
+    return key.startswith("AQ.") or key.startswith("AIza")
 
-    # Google exposes an OpenAI-compatible endpoint, so the same client works.
-    client = OpenAI(
-        api_key=key,
-        base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-        max_retries=2,
-    )
-    return client, MODELS.get(task, DEFAULT_MODEL)
+
+def _client_and_model_for(task: str, user: str | None = None) -> tuple[OpenAI, str]:
+    """One server key for everyone. Students do not supply their own."""
+    key = os.getenv("OPENROUTER_API_KEY", "") or os.getenv("GEMINI_API_KEY", "")
+    if not key:
+        raise NoAPIKey("No API key configured. Set OPENROUTER_API_KEY in the environment.")
+
+    if _is_google_key(key):
+        client = OpenAI(
+            api_key=key,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+            max_retries=2,
+        )
+        model = GEMINI_MODELS.get(task, "gemini-3.6-flash")
+    else:
+        client = OpenAI(
+            api_key=key,
+            base_url="https://openrouter.ai/api/v1",
+            max_retries=2,
+        )
+        model = OPENROUTER_MODELS.get(task, "openai/gpt-4o")
+
+    return client, model
 
 
 def chat(task: str, messages: list[dict], user: str | None = None) -> str:
