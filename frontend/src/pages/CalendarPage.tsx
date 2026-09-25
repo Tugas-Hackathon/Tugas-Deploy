@@ -88,8 +88,8 @@ export function CalendarPage() {
   const shift = (n: number) => setCursor(c => new Date(c.getFullYear(), c.getMonth() + n, 1))
 
   return (
-    <div className="max-w-3xl mx-auto px-8 py-9">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="max-w-3xl mx-auto px-3 sm:px-8 py-6 sm:py-9">
+      <div className="flex items-center flex-wrap gap-2 sm:gap-3 mb-6">
         <h2 className="text-xl font-semibold" style={{ color: "var(--text)" }}>{monthLabel}</h2>
         <Pill tone="accent">{items.length} scheduled</Pill>
         <div className="flex-1" />
@@ -121,7 +121,7 @@ export function CalendarPage() {
 
             return (
               <button key={i} onClick={() => setSelected(d)}
-                className="relative h-[74px] p-1.5 text-left transition-colors"
+                className="relative h-14 sm:h-[74px] p-1 sm:p-1.5 text-left transition-colors"
                 style={{
                   borderBottom: "1px solid var(--surface-border)",
                   borderRight: (i + 1) % 7 ? "1px solid var(--surface-border)" : "none",
@@ -130,7 +130,7 @@ export function CalendarPage() {
                 }}
                 onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = "var(--surface-hover)" }}
                 onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = "transparent" }}>
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium"
+                <span className="inline-flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full text-[11px] sm:text-xs font-medium"
                   style={
                     isToday
                       ? { background: "var(--accent)", color: "#fff" }
@@ -176,20 +176,24 @@ export function CalendarPage() {
       </div>
 
       {/* Add on the selected day */}
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <input value={title} onChange={e => setTitle(e.target.value)}
           onKeyDown={e => e.key === "Enter" && add()}
           placeholder={`Add something on ${day.toLocaleDateString(undefined, { day: "numeric", month: "short" })}…`}
           className="flex-1 min-w-0 rounded-xl px-4 py-2.5 text-sm outline-none"
           style={{ background: "var(--input-bg)", color: "var(--text)", border: "1px solid var(--input-border)" }} />
-        <input type="time" value={time} onChange={e => setTime(e.target.value)}
-          className="rounded-xl px-3 py-2.5 text-sm outline-none shrink-0"
-          style={{ background: "var(--input-bg)", color: "var(--text)", border: "1px solid var(--input-border)" }} />
-        <button onClick={add} disabled={busy || !title.trim()}
-          className="px-4 rounded-xl text-sm font-medium text-white disabled:opacity-40 shrink-0 transition-all"
-          style={{ background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", boxShadow: "0 0 16px var(--accent-glow)" }}>
-          <FontAwesomeIcon icon={faPlus} className="text-xs" />
-        </button>
+        {/* Grouped so time + submit stay a compact row even when the title
+            input above stacks full-width on a phone. */}
+        <div className="flex gap-2">
+          <input type="time" value={time} onChange={e => setTime(e.target.value)}
+            className="flex-1 sm:flex-none rounded-xl px-3 py-2.5 text-sm outline-none"
+            style={{ background: "var(--input-bg)", color: "var(--text)", border: "1px solid var(--input-border)" }} />
+          <button onClick={add} disabled={busy || !title.trim()}
+            className="px-4 rounded-xl text-sm font-medium text-white disabled:opacity-40 shrink-0 transition-all"
+            style={{ background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", boxShadow: "0 0 16px var(--accent-glow)" }}>
+            <FontAwesomeIcon icon={faPlus} className="text-xs" />
+          </button>
+        </div>
       </div>
 
       {error && <p className="text-xs mt-3" style={{ color: "var(--red)" }}>{error}</p>}
