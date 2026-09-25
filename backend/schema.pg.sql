@@ -146,3 +146,16 @@ CREATE TABLE IF NOT EXISTS quizzes (
     created_at INTEGER NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW())::bigint)
 );
 
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id BIGSERIAL PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(address),
+    subject_id INTEGER REFERENCES subjects(id),
+    branch_id INTEGER REFERENCES branches(id),
+    role TEXT NOT NULL CHECK(role IN ('user','assistant')),
+    content TEXT NOT NULL,
+    citations TEXT,
+    created_at INTEGER NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW())::bigint)
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_lookup
+    ON chat_messages(user_id, subject_id, branch_id, created_at);

@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Depends
@@ -35,6 +36,58 @@ def _chunk_text(material_id: int, text: str) -> list[tuple[str, str]]:
             chunks.append((f"M{material_id}p{page}", chunk))
             page += 1
     return chunks
+
+
+def _save_messages(db, user: str, subject_id: int, question: str, answer: str, citations: list[dict]):
+    """Persist the user question and assistant answer to chat_messages."""
+    db.execute(
+        "INSERT INTO chat_messages (user_id, subject_id, role, content) VALUES (?, ?, 'user', ?)",
+        (user, subject_id, question),
+    )
+    db.execute(
+        "INSERT INTO chat_messages (user_id, subject_id, role, content, citations) VALUES (?, ?, 'assistant', ?, ?)",
+        (user, subject_id, answer, json.dumps(citations) if citations else None),
+    )
+
+
+@router.get("/subjects/{subject_id}/chat")
+def history(subject_id: int, limit: int = 50, user: str = Depends(current_user)):
+    """Return the last `limit` chat messages for a subject, oldest first."""
+    with get_db() as db:
+        sub = db.execute(
+            "SELECT id FROM subjects WHERE id=? AND user_id=?", (subject_id, user)
+        ).fetchone()
+        if not sub:
+            raise HTTPException(404, "subject not found")
+
+        rows = db.execute(
+            """
+            SELECT id, role, content, citations, created_at
+            FROM chat_messages
+            WHERE user_id=? AND subject_id=?
+            ORDER BY created_at DESC, id DESC
+            LIMIT ?
+            """,
+            (user, subject_id, limit),
+        ).fetchall()
+
+    # Return oldest-first so the frontend can render top-to-bottom
+    messages = []
+    for r in reversed(rows):
+        msg = {
+            "id": r["id"],
+            "role": r["role"],
+            "content": r["content"],
+            "created_at": r["created_at"],
+        }
+        if r["citations"]:
+            try:
+                msg["citations"] = json.loads(r["citations"])
+            except Exception:
+                msg["citations"] = []
+        messages.append(msg)
+
+    return {"messages": messages}
 
 
 @router.post("/subjects/{subject_id}/ask")
@@ -96,5 +149,9 @@ def ask(subject_id: int, body: AskBody, user: str = Depends(current_user)):
         for c in result.citations
         if c.chunk_id in valid_ids
     ]
+
+    # Persist both turns so history is available on next load
+    with get_db() as db:
+        _save_messages(db, user, subject_id, body.question, result.answer, valid_citations)
 
     return {"answer": result.answer, "citations": valid_citations}
