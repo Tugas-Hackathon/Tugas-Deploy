@@ -15,9 +15,11 @@ interface Props {
   view: View
   onNavigate: (v: View) => void
   onCrumb: (c: string) => void
+  mobileOpen?: boolean
+  onMobileClose?: () => void
 }
 
-export function Sidebar({ view, onNavigate, onCrumb }: Props) {
+export function Sidebar({ view, onNavigate, onCrumb, mobileOpen = false, onMobileClose }: Props) {
   const { theme, toggle } = useTheme()
   const [subjects, setSubjects] = useState<any[]>([])
   const [branches, setBranches] = useState<Record<number, any[]>>({})
@@ -54,6 +56,7 @@ export function Sidebar({ view, onNavigate, onCrumb }: Props) {
   function go(v: View, crumb: string) {
     onNavigate(v)
     onCrumb(crumb)
+    onMobileClose?.()
   }
 
   function toggleSubject(id: number) {
@@ -105,8 +108,21 @@ export function Sidebar({ view, onNavigate, onCrumb }: Props) {
   const isActive = (v: View) => JSON.stringify(v) === JSON.stringify(view)
 
   return (
-    <aside className="relative flex flex-col w-64 shrink-0 select-none rounded-2xl overflow-hidden backdrop-blur-xl"
-      style={{ background: "var(--panel)", border: "1px solid var(--panel-border)" }}>
+    <>
+      {/* Backdrop: tapping outside the drawer closes it. Desktop never sets
+          mobileOpen true, so md:hidden is a safety net, not the only guard. */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 md:hidden" style={{ background: "rgba(0,0,0,0.55)" }}
+          onClick={onMobileClose} />
+      )}
+      <aside
+        className={[
+          "fixed inset-y-0 left-0 z-50 w-64 flex flex-col shrink-0 select-none",
+          "rounded-none overflow-hidden backdrop-blur-xl transition-transform duration-300 ease-out",
+          "md:relative md:z-auto md:rounded-2xl md:translate-x-0",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+        ].join(" ")}
+        style={{ background: "var(--panel)", border: "1px solid var(--panel-border)" }}>
 
       {/* Brand */}
       <div className="px-4 pt-4 pb-3 flex items-center gap-3"
@@ -125,6 +141,11 @@ export function Sidebar({ view, onNavigate, onCrumb }: Props) {
           </div>
         </div>
         <Pill tone="dim">v2.4</Pill>
+        <button onClick={onMobileClose}
+          className="md:hidden w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+          style={{ background: "var(--surface)", color: "var(--text-dim)" }} aria-label="Close menu">
+          <FontAwesomeIcon icon={faXmark} className="text-xs" />
+        </button>
       </div>
 
       {/* Search */}
@@ -269,7 +290,8 @@ export function Sidebar({ view, onNavigate, onCrumb }: Props) {
           </a>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   )
 }
 
