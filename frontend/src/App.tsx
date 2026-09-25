@@ -50,8 +50,9 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2 text-xs font-mono">
-            <span className="px-2.5 py-1 rounded-full border text-[11px]"
+            <span className="px-2.5 py-1 rounded-full border text-[11px] flex items-center gap-1.5"
               style={{ background: "var(--surface)", borderColor: "var(--surface-border)", color: "var(--text-dim)" }}>
+              <img src="/botchain_icon.png" alt="BOT Chain" className="w-3.5 h-3.5 rounded-full object-contain" />
               BOT Chain (EVM)
             </span>
           </div>
@@ -80,7 +81,7 @@ export default function App() {
           {/* Network / Partner Callout */}
           <div className="flex items-center justify-center gap-2.5 text-xs font-mono rounded-xl py-2 px-4 mx-auto w-fit"
             style={{ background: "var(--surface)", border: "1px solid var(--surface-border)" }}>
-            <span className="w-2 h-2 rounded-full animate-ping" style={{ background: "var(--teal)" }} />
+            <img src="/botchain_icon.png" alt="BOT Chain" className="w-4 h-4 rounded-full object-contain shrink-0" />
             <span style={{ color: "var(--text-dim)" }}>Anchored on</span>
             <a href="https://botchain.ai/" target="_blank" rel="noopener noreferrer"
               className="font-semibold transition-colors hover:underline" style={{ color: "var(--accent-bright)" }}>
@@ -106,15 +107,17 @@ export default function App() {
           <div className="flex items-center gap-4">
             <span style={{ color: "var(--text-dim)" }}>Powered by</span>
             <a href="https://botchain.ai/" target="_blank" rel="noopener noreferrer"
-              className="font-medium transition-colors hover:underline flex items-center gap-1"
+              className="font-medium transition-colors hover:underline flex items-center gap-1.5"
               style={{ color: "var(--accent-bright)" }}>
+              <img src="/botchain_icon.png" alt="BOT Chain" className="w-3.5 h-3.5 rounded-full object-contain" />
               <span>BOT Chain (botchain.ai)</span>
               <span className="text-[10px]">↗</span>
             </a>
             <span style={{ color: "var(--panel-border)" }}>•</span>
             <a href="https://scan.botchain.ai/" target="_blank" rel="noopener noreferrer"
-              className="font-medium transition-colors hover:underline flex items-center gap-1"
+              className="font-medium transition-colors hover:underline flex items-center gap-1.5"
               style={{ color: "var(--text-dim)" }}>
+              <img src="/botchain_icon.png" alt="BOTScan" className="w-3.5 h-3.5 rounded-full object-contain" />
               <span>BOT Chain Explorer</span>
               <span className="text-[10px]">↗</span>
             </a>

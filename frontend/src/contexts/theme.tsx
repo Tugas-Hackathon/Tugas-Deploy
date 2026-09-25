@@ -3,13 +3,13 @@ import { createContext, useContext, useState, useEffect } from "react"
 type Theme = "light" | "dark"
 
 const ThemeContext = createContext<{ theme: Theme; toggle: () => void }>({
-  theme: "dark",
+  theme: "light",
   toggle: () => {},
 })
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem("tugas_theme") as Theme) ?? "dark"
+    () => (localStorage.getItem("tugas_theme") as Theme) ?? "light"
   )
 
   // Native controls — select dropdowns, scrollbars, date pickers — are drawn by
