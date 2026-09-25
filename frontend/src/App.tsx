@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
   faWandMagicSparkles, faFileLines, faDownload, faTrash,
-  faBell, faSliders, faRobot, faPaperclip, faLink, faFileArrowUp,
+  faBell, faSliders, faRobot, faPaperclip, faLink, faFileArrowUp, faBars,
 } from "@fortawesome/free-solid-svg-icons"
 import { useAuth } from "./hooks/useAuth"
 import { useTheme, vars } from "./contexts/theme"
@@ -27,6 +27,7 @@ export default function App() {
   const { theme } = useTheme()
   const [view, setView] = useState<View>({ type: "home" })
   const [crumb, setCrumb] = useState("Workspace")
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const cssVars = vars[theme] as React.CSSProperties
 
@@ -129,10 +130,14 @@ export default function App() {
     <div style={{ ...cssVars, background: "var(--page-bg)" }}
       className="relative h-screen overflow-hidden flex gap-3 p-3">
       <Glows />
-      <Sidebar view={view} onNavigate={setView} onCrumb={setCrumb} />
-      <main className="relative flex-1 flex flex-col rounded-2xl overflow-hidden backdrop-blur-xl"
+      <Sidebar view={view}
+        onNavigate={setView} onCrumb={setCrumb}
+        mobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
+      <main className="relative flex-1 flex flex-col min-w-0 rounded-2xl overflow-hidden backdrop-blur-xl"
         style={{ background: "var(--panel)", border: "1px solid var(--panel-border)" }}>
-        <TopBar crumb={crumb} onSettings={() => { setView({ type: "settings" }); setCrumb("Settings") }} />
+        <TopBar crumb={crumb}
+          onMenu={() => setSidebarOpen(true)}
+          onSettings={() => { setView({ type: "settings" }); setCrumb("Settings") }} />
         <div className="flex-1 overflow-y-auto">
           <MainContent view={view} onNavigate={setView} />
         </div>
@@ -155,14 +160,19 @@ function Glows() {
   )
 }
 
-function TopBar({ crumb, onSettings }: { crumb: string; onSettings: () => void }) {
+function TopBar({ crumb, onMenu, onSettings }: { crumb: string; onMenu: () => void; onSettings: () => void }) {
   return (
-    <header className="shrink-0 flex items-center gap-4 px-5 h-[68px]"
+    <header className="shrink-0 flex items-center gap-3 sm:gap-4 px-3 sm:px-5 h-[68px]"
       style={{ borderBottom: "1px solid var(--panel-border)" }}>
-      <div className="flex items-center gap-2 text-[13px] font-mono">
-        <span style={{ color: "var(--accent-bright)" }}>Tugas OS</span>
-        <span style={{ color: "var(--text-faint)" }}>/</span>
-        <span style={{ color: "var(--text)" }}>{crumb}</span>
+      <button onClick={onMenu} aria-label="Open menu"
+        className="md:hidden w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors"
+        style={{ background: "var(--surface)", border: "1px solid var(--surface-border)", color: "var(--text-dim)" }}>
+        <FontAwesomeIcon icon={faBars} className="text-xs" />
+      </button>
+      <div className="flex items-center gap-2 text-[13px] font-mono min-w-0">
+        <span className="hidden sm:inline" style={{ color: "var(--accent-bright)" }}>Tugas OS</span>
+        <span className="hidden sm:inline" style={{ color: "var(--text-faint)" }}>/</span>
+        <span className="truncate" style={{ color: "var(--text)" }}>{crumb}</span>
       </div>
 
       <div className="flex-1" />
