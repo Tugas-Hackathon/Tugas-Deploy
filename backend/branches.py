@@ -7,9 +7,6 @@ from db import get_db
 from auth import current_user
 from llm import parse, LLMDeclined
 from materials import _extract_text
-from pdf_export import generate_milestone_pdf
-from docx_export import generate_milestone_docx
-
 PLAN_EXTS = {".pdf", ".docx", ".txt", ".md"}
 MAX_BRIEF_BYTES = 10 * 1024 * 1024
 
@@ -123,6 +120,11 @@ def export_branch_pdf(branch_id: int, user: str = Depends(current_user)):
     if not milestones:
         raise HTTPException(400, "No milestones found for this branch")
 
+    try:
+        from pdf_export import generate_milestone_pdf
+    except ImportError as e:
+        raise HTTPException(500, f"PDF export module unavailable: {e}")
+
     pdf_bytes = generate_milestone_pdf(_row(br), _row(sub), [_row(m) for m in milestones], user)
     clean_title = re.sub(r"[^\w\-_\. ]", "_", br["title"]).strip() or "assignment"
     filename = f"{clean_title}_Proof_of_Learning.pdf"
@@ -160,6 +162,11 @@ def export_branch_docx(branch_id: int, user: str = Depends(current_user)):
 
     if not milestones:
         raise HTTPException(400, "No milestones found for this branch")
+
+    try:
+        from docx_export import generate_milestone_docx
+    except ImportError as e:
+        raise HTTPException(500, f"DOCX export module unavailable: {e}")
 
     docx_bytes = generate_milestone_docx(_row(br), _row(sub), [_row(m) for m in milestones], user)
     clean_title = re.sub(r"[^\w\-_\. ]", "_", br["title"]).strip() or "assignment"

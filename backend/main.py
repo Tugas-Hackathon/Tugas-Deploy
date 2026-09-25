@@ -11,13 +11,6 @@ from fastapi.responses import JSONResponse
 
 app = FastAPI(title="Tugas API")
 
-# Vercel forwards /api/* to this function with the path intact, so the routes
-# have to carry that prefix. root_path does not do this — it only affects the
-# URLs shown in the docs, which is why setting it left every route 404ing.
-# Locally (uvicorn main:app) this env var is unset, so it defaults to "" and
-# routes are reachable at /auth, /subjects, etc. as before.
-API_PREFIX = os.getenv("API_PREFIX", "")
-
 _cors_env = os.getenv("CORS_ORIGIN", "")
 allowed_origins = [
     "http://localhost:5173",
@@ -56,7 +49,10 @@ failed: dict[str, str] = {}
 for _name in ROUTERS:
     try:
         _module = importlib.import_module(_name)
-        app.include_router(_module.router, prefix=API_PREFIX)
+        # Mount both at root (/auth/...) and with /api prefix (/api/auth/...)
+        # so whether requests arrive direct or via Vercel rewrites, they match.
+        app.include_router(_module.router)
+        app.include_router(_module.router, prefix="/api")
         loaded.append(_name)
     except Exception as _exc:
         failed[_name] = f"{type(_exc).__name__}: {_exc}"
@@ -86,10 +82,7 @@ except Exception:
     traceback.print_exc()
 
 
-@app.get(f"{API_PREFIX}/health")
-def health():
-    # Shape of the database URL only — scheme, host, port, user. Never the
-    # password, which is why this is safe to return from a public endpoint.
+def _get_health_status():
     dsn: dict = {}
     raw = os.getenv("DATABASE_URL", "")
     if raw:
@@ -122,3 +115,34 @@ def health():
             "bucket": os.getenv("SUPABASE_BUCKET") or None,
         },
     }
+
+
+@app.get("/health")
+@app.get("/api/health")
+def health():
+    return _get_health_status()
+
+
+def _do_storage_probe():
+    import storage, uuid
+    key = f"_probe/{uuid.uuid4()}.txt"
+    try:
+        ref = storage.put(key, b"tugas probe", "text/plain")
+    except Exception as exc:
+        return {"ok": False, "stage": "put", "error": f"{type(exc).__name__}: {exc}"}
+    try:
+        data = storage.get(ref)
+    except Exception as exc:
+        return {"ok": False, "stage": "get", "error": f"{type(exc).__name__}: {exc}", "ref": ref}
+    finally:
+        try:
+            storage.delete(ref)
+        except Exception:
+            pass
+    return {"ok": True, "ref": ref, "read_back": len(data)}
+
+
+@app.get("/storage-probe")
+@app.get("/api/storage-probe")
+def storage_probe():
+    return _do_storage_probe()
